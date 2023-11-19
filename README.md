@@ -1,1 +1,1 @@
-"Script for personal system cleanup. Deletes temporary files, stops a specific process, and removes unnecessary files. For personal use only."
+"This script is a personal system cleanup tool, created for my own use and for the convenience of students in my class. It is designed to perform routine tasks such as deleting temporary files, stopping a specific process (Xenon.exe), and clearing unnecessary files from the system. The script is intended for exclusive use by myself and students in my class.
