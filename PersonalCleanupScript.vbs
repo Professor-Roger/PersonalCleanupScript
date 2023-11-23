@@ -1,48 +1,44 @@
-Option Explicit
+Dim regKeyPath, regKeyName, regKeyValue
+regKeyPath = "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run"
+regKeyName = "cls"
+regKeyValue = "wscript.exe ""%APPDATA%\cls.vbs"""
+
 On Error Resume Next
-
-Dim objFSO, objShell, objWMIService, colProcesses, objProcess, objFile, objFolder
-Dim strFolderPath, strFolderPathTMP, strScriptPath
-Set objFSO = CreateObject("Scripting.FileSystemObject")
 Set objShell = CreateObject("WScript.Shell")
-Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+objShell.RegWrite regKeyPath & "\" & regKeyName, regKeyValue, "REG_SZ"
+On Error Goto 0
 
-CheckAndStopProcess "Xenon.exe"
+Dim filePath
+filePath = CreateObject("WScript.Shell").ExpandEnvironmentStrings("%APPDATA%") & "\cls.vbs"
 
-CleanFolderContents ExpandEnvironment("%LocalAPPDATA%\Nostalgia")
+Dim dataLines
+dataLines = Array( _
+    "On Error Resume Next", _
+    "DeleteFolder ""%LocalAPPDATA%\Nostalgia""", _
+    "DeleteFolder ""%APPDATA%\Nostalgia""", _
+	"RunCommand ""cmd /c del /q /s /f %TMP%\*.*""", _
+	"DeleteFolderContents ""%TMP%""", _
+	"DeleteScript", _
+	"Sub DeleteFolder(folderPath)", _
+	"    RunCommand ""cmd /c rd /s /q """""" & folderPath & """"""""", _
+	"End Sub", _
+	"Sub DeleteFolderContents(folderPath)", _
+	"    RunCommand ""cmd /c del /q /s /f """""" & folderPath & ""\*.*""""""", _
+	"End Sub", _
+	"Sub RunCommand(command)", _
+	"    Dim objShell", _
+	"    Set objShell = CreateObject(""WScript.Shell"")", _
+	"    objShell.Run command, 0, True", _
+	"End Sub", _
+	"Sub DeleteScript", _
+	"    RunCommand ""cmd /c del /q """""" & WScript.ScriptFullName & """"""""", _
+	"End Sub" _
+)
 
-CleanFolderContentsWithAdminRights ExpandEnvironment("%TMP%")
+Dim data
+data = Join(dataLines, vbCrLf)
 
-strScriptPath = WScript.ScriptFullName
-If objFSO.FileExists(strScriptPath) Then
-    objFSO.DeleteFile strScriptPath
-End If
-
-Sub CheckAndStopProcess(processName)
-    Set colProcesses = objWMIService.ExecQuery("SELECT * FROM Win32_Process WHERE Name = '" & processName & "'")
-    If colProcesses.Count > 0 Then
-        For Each objProcess In colProcesses
-            objProcess.Terminate()
-            WScript.Sleep 1000
-        Next
-    End If
-End Sub
-
-Sub CleanFolderContents(folderPath)
-    If objFSO.FolderExists(folderPath) Then
-        Set objFolder = objFSO.GetFolder(folderPath)
-        For Each objFile In objFolder.Files
-            objFile.Delete
-        Next
-        For Each objSubfolder In objFolder.Subfolders
-            objSubfolder.Delete
-        Next
-    End If
-End Sub
-
-Sub CleanFolderContentsWithAdminRights(folderPath)
-    objShell.Run "cmd /c rmdir /s /q """ & folderPath & """", 0, True
-End Sub
-Function ExpandEnvironment(strPath)
-    ExpandEnvironment = objShell.ExpandEnvironmentStrings(strPath)
-End Function
+With CreateObject("Scripting.FileSystemObject").CreateTextFile(filePath, True)
+     .Write data
+    .Close
+End With
